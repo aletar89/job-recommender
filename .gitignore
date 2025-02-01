@@ -1,0 +1,4 @@
+jobs_evaluated*
+jobs_fetched*
+.env
+*.csv

@@ -2,3 +2,5 @@ jobs_evaluated*
 jobs_fetched*
 .env
 *.csv
+.idea/*
+__pycache__/*

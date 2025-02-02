@@ -1,19 +1,16 @@
 import os
 
 from pyairtable import Api
-from pyairtable.formulas import LOWER, EQ, match
+from pyairtable.formulas import match
 
 from ai_evaluator import JobEvaluation, format_bot_output
 from applications_table import AppTable
 from scrape_linkedin import JobDescription
 
-APP_ID = "appSHT3ZGlckOHaVy"
-TABLE_ID = "tblmDsJrr7cwBGsv5"
-
 
 class AirTable(AppTable):
     def __init__(self):
-        self.table = Api(os.environ['AIRTABLE_API_KEY']).table(APP_ID, TABLE_ID)
+        self.table = Api(os.environ['AIRTABLE_API_KEY']).table(os.environ['APP_ID'], os.environ['TABLE_ID'])
 
     def job_id_in_table(self, job_id: str) -> bool:
         res = self.table.first(formula=match({"id": job_id}))

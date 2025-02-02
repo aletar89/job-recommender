@@ -4,3 +4,4 @@ jobs_fetched*
 *.csv
 .idea/*
 __pycache__/*
+.mypy_cache/*

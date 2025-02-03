@@ -17,12 +17,14 @@ JOBS_DIR = "jobs_fetched"
 
 
 class Geoid(Enum):
+    """Geoid for the location of the job search"""
     BERLIN = 103035651
     GERMANY = 101282230
     EUROPE = 91000000
 
 
 class PostingTime(Enum):
+    """Posting time for the job search"""
     PAST_MONTH = "&f_TPR=r2592000"
     PAST_WEEK = "&f_TPR=r604800"
     PAST_24H = "&f_TPR=r86400"
@@ -30,6 +32,7 @@ class PostingTime(Enum):
 
 
 class Remote(Enum):
+    """Remote for the job search"""
     ON_SITE = "&f_WT=1"
     REMOTE = "&f_WT=2"
     HYBRID = "&f_WT=3"
@@ -37,6 +40,7 @@ class Remote(Enum):
 
 
 class JobDescription(BaseModel):
+    """Job description"""
     job_id: str
     url: str
     company: str
@@ -52,6 +56,7 @@ def format_search_url(
         remote: Remote = Remote.ANY,
         offset: int = 0
 ) -> str:
+    """Format the search URL"""
     return BASE_SEARCH_URL + "".join([
         f"keywords={quote(search_query)}",
         f"&geoId={geo_id.value}",
@@ -64,6 +69,7 @@ def format_search_url(
 
 
 def get_search_page(search_url: str) -> list[str]:
+    """Get the search page"""
     l = []
     res = requests.get(search_url)
     all_jobs_on_this_page = BeautifulSoup(res.text, 'html.parser').find_all("li")
@@ -82,7 +88,8 @@ def crawl_search(search_query: str,
                  post_time: PostingTime = PostingTime.PAST_WEEK,
                  remote: Remote = Remote.ANY,
                  ) -> list[str]:
-    out = set()
+    """Crawl the search"""
+    out:set[str] = set()
     start = 0
     while len(out) < num_results:
         search_url = format_search_url(search_query, geo_id, post_time, remote, start)
@@ -95,8 +102,10 @@ def crawl_search(search_query: str,
     return list(out)
 
 
-def parse_posted_time(posted):
+def parse_posted_time(posted: str) -> str:
+    """Parse the posted time"""
     now = datetime.now()
+
 
     match = re.match(r"(\d+)\s+(day|hour|minute|second)s?\s+ago", posted)
     if not match:
@@ -119,6 +128,7 @@ def parse_posted_time(posted):
 
 
 def get_job_description(job_id: str) -> JobDescription:
+    """Get the job description"""
     job_url = JOB_URL.format(job_id=job_id)
     resp = requests.get(job_url)
     if resp.status_code == 429:
@@ -150,6 +160,7 @@ def get_job_description(job_id: str) -> JobDescription:
 
 
 def cached_job_description(job_id: str) -> JobDescription:
+    """Cached job description"""
     if not os.path.exists(JOBS_DIR):
         os.makedirs(JOBS_DIR)
     file_name = JOBS_DIR + f"/{job_id}.json"
@@ -162,10 +173,3 @@ def cached_job_description(job_id: str) -> JobDescription:
     return job
 
 
-def get_job_descriptions_from_search(num_pages: int) -> list[JobDescription]:
-    job_ids = crawl_search(num_pages)
-    return [cached_job_description(job_id) for job_id in tqdm(job_ids, desc="Fetching job descriptions")]
-
-
-if __name__ == "__main__":
-    get_job_descriptions_from_search(3)

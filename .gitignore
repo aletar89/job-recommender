@@ -6,3 +6,4 @@ jobs_fetched*
 __pycache__/*
 .mypy_cache/*
 .vscode/*
+glassdoor_jobs/*

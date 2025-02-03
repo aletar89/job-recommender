@@ -1,3 +1,7 @@
+"""
+This script scrapes jobs from LinkedIn.
+"""
+
 import os
 import re
 import time
@@ -5,19 +9,25 @@ from datetime import datetime, timedelta
 from enum import Enum
 from urllib.parse import quote
 
+
 import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
-from tqdm import tqdm
 
-BASE_SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
-SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={search_query}&geoId={}&f_E=4&f_TPR=r604800&start={start}"
-JOB_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}'
+BASE_SEARCH_URL = (
+    "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
+)
+SEARCH_URL = (
+    "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/"
+    + "search?keywords={search_query}&geoId={}&f_E=4&f_TPR=r604800&start={start}"
+)
+JOB_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 JOBS_DIR = "jobs_fetched"
 
 
 class Geoid(Enum):
     """Geoid for the location of the job search"""
+
     BERLIN = 103035651
     GERMANY = 101282230
     EUROPE = 91000000
@@ -25,6 +35,7 @@ class Geoid(Enum):
 
 class PostingTime(Enum):
     """Posting time for the job search"""
+
     PAST_MONTH = "&f_TPR=r2592000"
     PAST_WEEK = "&f_TPR=r604800"
     PAST_24H = "&f_TPR=r86400"
@@ -33,6 +44,7 @@ class PostingTime(Enum):
 
 class Remote(Enum):
     """Remote for the job search"""
+
     ON_SITE = "&f_WT=1"
     REMOTE = "&f_WT=2"
     HYBRID = "&f_WT=3"
@@ -41,6 +53,7 @@ class Remote(Enum):
 
 class JobDescription(BaseModel):
     """Job description"""
+
     job_id: str
     url: str
     company: str
@@ -50,46 +63,53 @@ class JobDescription(BaseModel):
 
 
 def format_search_url(
-        search_query: str,
-        geo_id: Geoid = Geoid.BERLIN,
-        post_time: PostingTime = PostingTime.PAST_WEEK,
-        remote: Remote = Remote.ANY,
-        offset: int = 0
+    search_query: str,
+    geo_id: Geoid = Geoid.BERLIN,
+    post_time: PostingTime = PostingTime.PAST_WEEK,
+    remote: Remote = Remote.ANY,
+    offset: int = 0,
 ) -> str:
     """Format the search URL"""
-    return BASE_SEARCH_URL + "".join([
-        f"keywords={quote(search_query)}",
-        f"&geoId={geo_id.value}",
-        "&f_E=4",  # Mid-Senior level
-        "&f_JT=F",  # Full-time
-        post_time.value,
-        remote.value,
-        f"&start={offset}"
-    ])
+    return BASE_SEARCH_URL + "".join(
+        [
+            f"keywords={quote(search_query)}",
+            f"&geoId={geo_id.value}",
+            "&f_E=4",  # Mid-Senior level
+            "&f_JT=F",  # Full-time
+            post_time.value,
+            remote.value,
+            f"&start={offset}",
+        ]
+    )
 
 
 def get_search_page(search_url: str) -> list[str]:
     """Get the search page"""
     l = []
-    res = requests.get(search_url)
-    all_jobs_on_this_page = BeautifulSoup(res.text, 'html.parser').find_all("li")
-    for x in range(0, len(all_jobs_on_this_page)):
+    res = requests.get(search_url, timeout=30)
+    all_jobs_on_this_page = BeautifulSoup(res.text, "html.parser").find_all("li")
+    for job_item in all_jobs_on_this_page:
         try:
-            jobid = all_jobs_on_this_page[x].find("div", {"class": "base-card"}).get('data-entity-urn').split(":")[3]
+            jobid = (
+                job_item.find("div", {"class": "base-card"})
+                .get("data-entity-urn")
+                .split(":")[3]
+            )
             l.append(jobid)
-        except:
-            print(f"Failed to parse this job item:\n{all_jobs_on_this_page[x]}")
+        except (AttributeError, IndexError) as e:
+            print(f"Failed to parse this job item:\n{job_item}\nError: {e}")
     return l
 
 
-def crawl_search(search_query: str,
-                 num_results: int,
-                 geo_id: Geoid = Geoid.BERLIN,
-                 post_time: PostingTime = PostingTime.PAST_WEEK,
-                 remote: Remote = Remote.ANY,
-                 ) -> list[str]:
+def crawl_search(
+    search_query: str,
+    num_results: int,
+    geo_id: Geoid = Geoid.BERLIN,
+    post_time: PostingTime = PostingTime.PAST_WEEK,
+    remote: Remote = Remote.ANY,
+) -> list[str]:
     """Crawl the search"""
-    out:set[str] = set()
+    out: set[str] = set()
     start = 0
     while len(out) < num_results:
         search_url = format_search_url(search_query, geo_id, post_time, remote, start)
@@ -105,7 +125,6 @@ def crawl_search(search_query: str,
 def parse_posted_time(posted: str) -> str:
     """Parse the posted time"""
     now = datetime.now()
-
 
     match = re.match(r"(\d+)\s+(day|hour|minute|second)s?\s+ago", posted)
     if not match:
@@ -130,24 +149,32 @@ def parse_posted_time(posted: str) -> str:
 def get_job_description(job_id: str) -> JobDescription:
     """Get the job description"""
     job_url = JOB_URL.format(job_id=job_id)
-    resp = requests.get(job_url)
+    resp = requests.get(job_url, timeout=30)
     if resp.status_code == 429:
         print("😴 Rate limited, sleeping for 5 seconds")
         time.sleep(5)
-        resp = requests.get(job_url)
+        resp = requests.get(job_url, timeout=30)
     if not resp.ok:
         raise RuntimeError(f"Failed to fetch job {job_id}")
-    soup = BeautifulSoup(resp.text, 'html.parser')
+    soup = BeautifulSoup(resp.text, "html.parser")
     try:
-        company = soup.find('a', class_="topcard__org-name-link").text.strip()
-        title_h2 = soup.find('h2', class_="top-card-layout__title")
+        company_elem = soup.find("a", class_="topcard__org-name-link")
+        title_h2 = soup.find("h2", class_="top-card-layout__title")
+        desc_elem = soup.find("div", class_="show-more-less-html__markup")
+        date_elem = soup.find(
+            "span", class_=lambda c: c and ("posted-time-ago__text" in c)
+        )
+
+        if not all([company_elem, title_h2, desc_elem, date_elem]):
+            raise AttributeError("Failed to find required elements")
+
+        company = company_elem.text.strip()
         title = title_h2.text.strip()
-        url = title_h2.parent.get('href')
-        description = soup.find('div', class_='show-more-less-html__markup').get_text("\n", strip=True)
-        date_posted = parse_posted_time(
-            soup.find('span', class_=lambda c: c and ('posted-time-ago__text' in c)).text.strip())
-    except:
-        raise RuntimeError(f"Failed to parse job {job_id}:\n{resp.text}")
+        url = title_h2.parent.get("href")
+        description = desc_elem.get_text("\n", strip=True)
+        date_posted = parse_posted_time(date_elem.text.strip())
+    except (AttributeError, IndexError) as e:
+        raise RuntimeError(f"Failed to parse job {job_id}: {e}\n{resp.text}")
 
     return JobDescription(
         job_id=job_id,
@@ -155,7 +182,7 @@ def get_job_description(job_id: str) -> JobDescription:
         company=company,
         title=title,
         description=description,
-        posted_date=date_posted
+        posted_date=date_posted,
     )
 
 
@@ -171,5 +198,3 @@ def cached_job_description(job_id: str) -> JobDescription:
     with open(file_name, "w", encoding="utf-8") as file:
         file.write(job.model_dump_json())
     return job
-
-

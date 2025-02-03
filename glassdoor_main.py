@@ -1,15 +1,22 @@
+"""
+This script evaluates jobs from Glassdoor and adds them to the Airtable.
+"""
 import sys
+
 from tqdm import tqdm
-from ai_evaluator import JobEvaluation, cached_job_evaluation, format_bot_output
+
+
+from ai_evaluator import (JobEvaluation, cached_job_evaluation,
+                          format_bot_output)
 from airtable import AirTable
 from parse_glassdoor_jobs import parse_glassdoor_jobs
-from scrape_linkedin import JobDescription, crawl_search
-
+from scrape_linkedin import JobDescription
 
 THRESHOLD = 85
 VERBOSE = False
 
 def evaluate_job(job_id: str) -> tuple[JobDescription, JobEvaluation]:
+    """Evaluate a job from Glassdoor and return the job description and evaluation."""
     with open(f"glassdoor_jobs/{job_id}.json", "r", encoding="utf-8") as f:
         job_desc = JobDescription.model_validate_json(f.read())
     job_eval = cached_job_evaluation(job_desc)

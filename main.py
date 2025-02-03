@@ -5,12 +5,12 @@ from airtable import AirTable
 from scrape_linkedin import crawl_search
 
 THRESHOLD = 85
-VERBOSE = True
+VERBOSE = False
 
 
 def main() -> int:
     """Main entry point"""
-    job_ids = crawl_search("Software Engineer", 50)
+    job_ids = crawl_search("Software Engineer", 100)
     air_table = AirTable()
     for job_id in tqdm(job_ids, desc="Evaluating jobs"):
         description, evaluation = evaluate_job(job_id)

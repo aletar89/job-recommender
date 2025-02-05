@@ -5,7 +5,7 @@ I find this very useful as it removes the emotionaly difficult part of deciding 
 
 # How to use:
 - Replace the CV in cv.txt with your CV and the skills evaluation in skills.txt with your skills.
-- Create a .env file with your OpenAI API key and optionally AirTable key and table parameters (use the .env.example for the environ names)
+- Create a `.env` file with your OpenAI API key and optionally AirTable key and table parameters (use the `.env.example` for the environ names)
 
 ## LinkedIn
 - Open and run `main.py`

@@ -43,12 +43,14 @@
     }
     
     async function main() {
+        //TODO: Click on the "Show more jobs" button
         const data = await parseContent();
         if (data.length === 0) {
             console.log("No data found. Check your selectors.");
+
             return;
         }
-        downloadJSON(data, "exported_data.json");
+        downloadJSON(data, "glassdoor_exported_data.json");
     }
     
     main();

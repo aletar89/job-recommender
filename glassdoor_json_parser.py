@@ -15,10 +15,14 @@ def extract_job_id(url: str) -> str:
     return job_id
 
 
-def parse_glassdoor_jobs(file_name: str = "exported_data.json") -> list[JobDescription]:
+def parse_glassdoor_jobs(file_name: str) -> list[JobDescription]:
     """Parse jobs scraped from Glassdoor."""
     output_dir = Path(JOBS_DIR)
     output_dir.mkdir(exist_ok=True)
+
+    if not Path(file_name).exists():
+        print(f"File with scraped Glassdoor jobs {file_name} does not exist")
+        return []
 
     with open(file_name, "r", encoding="utf-8") as f:
         jobs_data = json.load(f)
@@ -44,8 +48,3 @@ def parse_glassdoor_jobs(file_name: str = "exported_data.json") -> list[JobDescr
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(job_desc.__dict__, f, indent=2)
     return jobs
-
-
-if __name__ == "__main__":
-
-    parse_glassdoor_jobs()

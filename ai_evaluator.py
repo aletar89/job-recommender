@@ -161,3 +161,7 @@ def jsons_to_csv():
         writer = csv.DictWriter(f, fieldnames=out[0].keys())
         writer.writeheader()
         writer.writerows(out)
+
+
+if __name__ == "__main__":
+    jsons_to_csv()

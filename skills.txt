@@ -1,0 +1,16 @@
+python: 5
+TypeScript: 5
+REST API: 5
+English: 5
+Data visualization: 5
+SQL: 4
+Prometheus and Grafana: 4
+DevOps: 3
+C, MATLAB: 3
+Node.js: 2
+React: 2
+ML: 2
+pandas, numpy: 2
+pytorch: 1
+German: 1
+Java, Go, Kotlin, C++, C#, Ruby, PHP, Swift, Golang, Rust, Scala, Django: 1

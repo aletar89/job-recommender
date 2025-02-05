@@ -1,31 +1,42 @@
-import sys
+"""Main entry point"""
+
 from tqdm import tqdm
-from ai_evaluator import evaluate_job, format_bot_output
+
+from ai_evaluator import cached_job_evaluation, format_bot_output
 from airtable import AirTable
-from scrape_linkedin import crawl_search
+from applications_table import AppTable
+from parse_glassdoor_jobs import parse_glassdoor_jobs
+from scrape_linkedin import scrape_linkedin
 
 THRESHOLD = 85
 VERBOSE = False
 
 
-def main() -> int:
+def main(app_table: AppTable) -> int:
     """Main entry point"""
-    job_ids = crawl_search("Software Engineer", 100)
-    air_table = AirTable()
-    for job_id in tqdm(job_ids, desc="Evaluating jobs"):
-        description, evaluation = evaluate_job(job_id)
+    linkedin_jobs = scrape_linkedin("Software Engineer", 100)
+    glassdoor_jobs = parse_glassdoor_jobs()
+    for job_description in tqdm(linkedin_jobs + glassdoor_jobs, desc="Evaluating jobs"):
+        evaluation = cached_job_evaluation(job_description)
         if VERBOSE:
             print("\n" + format_bot_output(evaluation))
 
         if (
             evaluation.fit_to_requirements_percentage >= THRESHOLD
-            and not air_table.job_id_in_table(job_id)
+            and not app_table.job_id_in_table(job_description.job_id)
         ):
-            print(f"🎯 Adding {description.company} to the table")
-            air_table.add_to_table(description, evaluation)
+            print(
+                f"🎯 Adding {job_description.title} at {job_description.company} to the table "
+                f"({evaluation.fit_to_requirements_percentage}% fit)"
+            )
+            app_table.add_to_table(job_description, evaluation)
 
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    my_table = AirTable()
+    # Also possible to use:
+    # my_table = CsvTable()
+    # TODO: Add more Google Sheet support
+    main(my_table)

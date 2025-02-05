@@ -2,17 +2,16 @@
 This script scrapes jobs from LinkedIn.
 """
 
-import os
 import re
 import time
 from datetime import datetime, timedelta
 from enum import Enum
 from urllib.parse import quote
 
-
 import requests
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
+
+from job_description import JobDescription, cache_job_description
 
 BASE_SEARCH_URL = (
     "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
@@ -22,7 +21,6 @@ SEARCH_URL = (
     + "search?keywords={search_query}&geoId={}&f_E=4&f_TPR=r604800&start={start}"
 )
 JOB_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
-JOBS_DIR = "jobs_fetched"
 
 
 class Geoid(Enum):
@@ -49,17 +47,6 @@ class Remote(Enum):
     REMOTE = "&f_WT=2"
     HYBRID = "&f_WT=3"
     ANY = ""
-
-
-class JobDescription(BaseModel):
-    """Job description"""
-
-    job_id: str
-    url: str
-    company: str
-    title: str
-    description: str
-    posted_date: str
 
 
 def format_search_url(
@@ -146,8 +133,9 @@ def parse_posted_time(posted: str) -> str:
     return (now - delta).date().isoformat()
 
 
-def get_job_description(job_id: str) -> JobDescription:
-    """Get the job description"""
+@cache_job_description
+def get_linkedin_job_description(job_id: str) -> JobDescription:
+    """Get the job description from LinkedIn"""
     job_url = JOB_URL.format(job_id=job_id)
     resp = requests.get(job_url, timeout=30)
     if resp.status_code == 429:
@@ -194,15 +182,13 @@ def get_job_description(job_id: str) -> JobDescription:
     )
 
 
-def cached_job_description(job_id: str) -> JobDescription:
-    """Cached job description"""
-    if not os.path.exists(JOBS_DIR):
-        os.makedirs(JOBS_DIR)
-    file_name = JOBS_DIR + f"/{job_id}.json"
-    if os.path.exists(file_name):
-        with open(file_name, encoding="utf-8") as file:
-            return JobDescription.model_validate_json(file.read())
-    job = get_job_description(job_id)
-    with open(file_name, "w", encoding="utf-8") as file:
-        file.write(job.model_dump_json())
-    return job
+def scrape_linkedin(
+    search_query: str,
+    num_results: int,
+    geo_id: Geoid = Geoid.BERLIN,
+    post_time: PostingTime = PostingTime.PAST_WEEK,
+    remote: Remote = Remote.ANY,
+) -> list[JobDescription]:
+    """Scrape LinkedIn"""
+    job_ids = crawl_search(search_query, num_results, geo_id, post_time, remote)
+    return [get_linkedin_job_description(job_id) for job_id in job_ids]

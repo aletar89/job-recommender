@@ -7,8 +7,7 @@ from textwrap import dedent
 from openai import OpenAI
 from pydantic import BaseModel
 
-from cv import CV
-from scrape_linkedin import JobDescription, cached_job_description
+from job_description import JobDescription, cached_job_description
 
 EVALUATIONS_DIR = "jobs_evaluated"
 
@@ -21,22 +20,7 @@ PROMPT = """
     </my CV>
     
     Skills self-assessment (1=beginner, 5=expert):
-    python: 5
-    TypeScript: 5
-    REST API: 5
-    English: 5
-    Data visualization: 5
-    SQL: 4
-    Prometheus and Grafana: 4
-    DevOps: 3
-    C, MATLAB: 3
-    Node.js: 2
-    React: 2
-    ML: 2
-    pandas, numpy: 2
-    pytorch: 1
-    German: 1
-    Java, Go, Kotlin, C++, C#, Ruby, PHP, Swift, Golang, Rust, Scala, Django: 1
+    {skills}
     
     On a personal note:
     - I've been doing Full Stack work for the last 5 years and this is what I'm most fresh at but I have a versatile background and I'm open to new challenges as a generalist engineer.
@@ -52,7 +36,6 @@ PROMPT = """
     
     Please evaluate the fit of the following job description to my skills and experience:
     """
-PROMPT.format(cv=CV)
 
 
 class Requirement(BaseModel):
@@ -81,13 +64,22 @@ class JobEvaluation(BotOutput):
     job_id: str
 
 
-def get_job_evaluation(job: JobDescription) -> JobEvaluation:
+def prompt() -> str:
+    """Format the prompt."""
+    with open("cv.txt", "r", encoding="utf-8") as f:
+        cv = f.read()
+    with open("skills.txt", "r", encoding="utf-8") as f:
+        skills = f.read()
+    return dedent(PROMPT.format(cv=cv, skills=skills))
+
+
+def ask_bot_to_evaluate(job: JobDescription) -> JobEvaluation:
     """Get a job evaluation."""
     completion = OpenAI().beta.chat.completions.parse(
         model=MODEL,
         temperature=0.2,
         messages=[
-            {"role": "system", "content": dedent(PROMPT)},
+            {"role": "system", "content": prompt()},
             {"role": "user", "content": f"{job.title}: {job.description}"},
         ],
         response_format=BotOutput,
@@ -106,38 +98,18 @@ def cached_job_evaluation(job: JobDescription) -> JobEvaluation:
         with open(file_name, encoding="utf-8") as file:
             return JobEvaluation.model_validate_json(file.read())
 
-    job_evaluation = get_job_evaluation(job)
+    job_evaluation = ask_bot_to_evaluate(job)
 
     with open(file_name, "w", encoding="utf-8") as file:
         file.write(job_evaluation.model_dump_json())
     return job_evaluation
 
 
-def evaluate_job(job_id: str) -> tuple[JobDescription, JobEvaluation]:
+def evaluation_result(job_id: str) -> tuple[JobDescription, JobEvaluation]:
     """Evaluate a job."""
     job = cached_job_description(job_id)
-    return job, cached_job_evaluation(job)
-
-
-def csv_to_jsons():
-    """Convert a CSV to JSONs."""
-    with open("jobs_evaluated.csv", "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            job = JobEvaluation(
-                job_id=row["id"],
-                what_the_company_does=row["what_the_company_does"],
-                job_description_summary=row["job_description_summary"],
-                fit_to_requirements_percentage=int(
-                    row["fit_to_requirements_percentage"]
-                ),
-                fit_to_requirements_explanation=row["fit_to_requirements_explanation"],
-                seniority_level_1_to_5=int(row["seniority_level"]),
-            )
-            with open(
-                f"{EVALUATIONS_DIR}/{job.job_id}.json", "w", encoding="utf-8"
-            ) as f:
-                f.write(job.model_dump_json())
+    job_evaluation = cached_job_evaluation(job)
+    return job, job_evaluation
 
 
 def format_requirements(requirements: list[Requirement], delimiter: str = ", ") -> str:
@@ -189,7 +161,3 @@ def jsons_to_csv():
         writer = csv.DictWriter(f, fieldnames=out[0].keys())
         writer.writeheader()
         writer.writerows(out)
-
-
-if __name__ == "__main__":
-    jsons_to_csv()

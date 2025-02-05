@@ -8,6 +8,7 @@
                 let company = document.querySelector(".EmployerProfile_employerNameHeading__bXBYr")?.textContent.trim() || "";
                 let title = document.querySelector(".heading_Level1__soLZs")?.textContent.trim() || "";
                 let link = item.href;
+                //TODO: Add date posted
                 console.log("Fetched " + company + " job")
                 resolve({ description, company, title, link });
             }, 5000);

@@ -1,14 +1,11 @@
-import argparse
+"""AI evaluator."""
+
 import csv
-import json
 import os
-import sys
-from pprint import pprint
 from textwrap import dedent
 
 from openai import OpenAI
 from pydantic import BaseModel
-from tqdm import tqdm
 
 from cv import CV
 from scrape_linkedin import JobDescription, cached_job_description
@@ -17,7 +14,7 @@ EVALUATIONS_DIR = "jobs_evaluated"
 
 MODEL = "gpt-4o"
 
-prompt = '''
+PROMPT = """
     You are a recruiter helping me to find a job given a description of my skills and experience.
     <my CV>
     {cv}
@@ -54,10 +51,13 @@ prompt = '''
     - summarize the job description - what will I be doing? the answer should be less than 10 words
     
     Please evaluate the fit of the following job description to my skills and experience:
-    '''
-prompt.format(cv=CV)
+    """
+PROMPT.format(cv=CV)
+
 
 class Requirement(BaseModel):
+    """Requirement for a job."""
+
     skill: str
     required_proficiency_level_1_to_5: int
     my_proficiency_level_1_to_5: int
@@ -65,6 +65,8 @@ class Requirement(BaseModel):
 
 
 class BotOutput(BaseModel):
+    """Bot output."""
+
     requirements: list[Requirement]
     fit_to_requirements_percentage: int
     fit_to_requirements_explanation: str
@@ -74,16 +76,19 @@ class BotOutput(BaseModel):
 
 
 class JobEvaluation(BotOutput):
+    """Job evaluation."""
+
     job_id: str
 
 
 def get_job_evaluation(job: JobDescription) -> JobEvaluation:
+    """Get a job evaluation."""
     completion = OpenAI().beta.chat.completions.parse(
         model=MODEL,
         temperature=0.2,
         messages=[
-            {"role": "system", "content": dedent(prompt)},
-            {"role": "user", "content": f"{job.title}: {job.description}"}
+            {"role": "system", "content": dedent(PROMPT)},
+            {"role": "user", "content": f"{job.title}: {job.description}"},
         ],
         response_format=BotOutput,
     )
@@ -93,6 +98,7 @@ def get_job_evaluation(job: JobDescription) -> JobEvaluation:
 
 
 def cached_job_evaluation(job: JobDescription) -> JobEvaluation:
+    """Cached job evaluation."""
     if not os.path.exists(EVALUATIONS_DIR):
         os.makedirs(EVALUATIONS_DIR)
     file_name = f"{EVALUATIONS_DIR}/{job.job_id}.json"
@@ -108,46 +114,62 @@ def cached_job_evaluation(job: JobDescription) -> JobEvaluation:
 
 
 def evaluate_job(job_id: str) -> tuple[JobDescription, JobEvaluation]:
+    """Evaluate a job."""
     job = cached_job_description(job_id)
     return job, cached_job_evaluation(job)
 
 
 def csv_to_jsons():
-    with open("jobs_evaluated.csv") as f:
+    """Convert a CSV to JSONs."""
+    with open("jobs_evaluated.csv", "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             job = JobEvaluation(
                 job_id=row["id"],
                 what_the_company_does=row["what_the_company_does"],
                 job_description_summary=row["job_description_summary"],
-                fit_to_requirements_percentage=int(row["fit_to_requirements_percentage"]),
+                fit_to_requirements_percentage=int(
+                    row["fit_to_requirements_percentage"]
+                ),
                 fit_to_requirements_explanation=row["fit_to_requirements_explanation"],
                 seniority_level_1_to_5=int(row["seniority_level"]),
             )
-            with open(f"{EVALUATIONS_DIR}/{job.job_id}.json", "w", encoding="utf-8") as f:
+            with open(
+                f"{EVALUATIONS_DIR}/{job.job_id}.json", "w", encoding="utf-8"
+            ) as f:
                 f.write(job.model_dump_json())
 
 
 def format_requirements(requirements: list[Requirement], delimiter: str = ", ") -> str:
+    """Format requirements."""
     requirements.sort(key=lambda r: r.requirement_strength_1_to_5, reverse=True)
     return delimiter.join(
-        f"{r.skill}({r.requirement_strength_1_to_5}): {r.my_proficiency_level_1_to_5}/{r.required_proficiency_level_1_to_5}"
-        for r in requirements)
+        f"{r.skill}({r.requirement_strength_1_to_5}): "
+        f"{r.my_proficiency_level_1_to_5}/{r.required_proficiency_level_1_to_5}"
+        for r in requirements
+    )
 
 
 def format_bot_output(bot_output: BotOutput) -> str:
-    return "\n".join([
-        f"{bot_output.job_description_summary} at a company that does {bot_output.what_the_company_does}.",
-        "Skills:",
-        format_requirements(bot_output.requirements, "\n"),
-        f"Fit to requirements: {bot_output.fit_to_requirements_percentage}% - {bot_output.fit_to_requirements_explanation}",
-    ])
+    """Format bot output."""
+    return "\n".join(
+        [
+            f"{bot_output.job_description_summary} "
+            f"at a company that does {bot_output.what_the_company_does}.",
+            "Skills:",
+            format_requirements(bot_output.requirements, "\n"),
+            f"Fit to requirements: {bot_output.fit_to_requirements_percentage}%"
+            f" - {bot_output.fit_to_requirements_explanation}",
+        ]
+    )
 
 
 def jsons_to_csv():
+    """Convert JSONs to a CSV."""
     out = []
     for file_name in os.listdir(EVALUATIONS_DIR):
         with open(f"{EVALUATIONS_DIR}/{file_name}", encoding="utf-8") as f:
+
             job = JobEvaluation.model_validate_json(f.read())
             row = {
                 "id": job.job_id,

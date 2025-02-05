@@ -165,16 +165,24 @@ def get_job_description(job_id: str) -> JobDescription:
             "span", class_=lambda c: c and ("posted-time-ago__text" in c)
         )
 
-        if not all([company_elem, title_h2, desc_elem, date_elem]):
+        if (
+            company_elem is None
+            or title_h2 is None
+            or desc_elem is None
+            or date_elem is None
+            or title_h2.parent is None
+        ):
             raise AttributeError("Failed to find required elements")
 
         company = company_elem.text.strip()
         title = title_h2.text.strip()
         url = title_h2.parent.get("href")
+        if not isinstance(url, str):
+            raise AttributeError("Failed to find valid URL")
         description = desc_elem.get_text("\n", strip=True)
         date_posted = parse_posted_time(date_elem.text.strip())
     except (AttributeError, IndexError) as e:
-        raise RuntimeError(f"Failed to parse job {job_id}: {e}\n{resp.text}")
+        raise RuntimeError(f"Failed to parse job {job_id}: {e}\n{resp.text}") from e
 
     return JobDescription(
         job_id=job_id,

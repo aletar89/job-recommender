@@ -1,24 +1,22 @@
+"""Script to parse jobs scraped from Glassdoor."""
+
 import json
-import os
-from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from scrape_linkedin import JobDescription
 
 
 def extract_job_id(url: str) -> str:
     """Extract jobListingId from Glassdoor URL."""
-    try:
-        parsed_url = urlparse(url)
-        params = parse_qs(parsed_url.query)
-        job_id = params.get("jobListingId", [""])[0]
-        return job_id
-    except:
-        return ""
+    parsed_url = urlparse(url)
+    params = parse_qs(parsed_url.query)
+    job_id = params.get("jobListingId", [""])[0]
+    return job_id
 
 
 def parse_glassdoor_jobs():
+    """Parse jobs scraped from Glassdoor."""
     output_dir = Path("jobs_fetched")
     output_dir.mkdir(exist_ok=True)
 
@@ -28,7 +26,7 @@ def parse_glassdoor_jobs():
     job_ids = []
     print(f"Found {len(jobs_data)} jobs")
     existing_counter = 0
-    for i, job in enumerate(jobs_data):
+    for job in jobs_data:
         job_id = extract_job_id(job["link"])
         if not job_id:
             print(f"Skipping job {job['title']} because it has no jobListingId")

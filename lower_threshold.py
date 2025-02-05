@@ -2,8 +2,6 @@
 This script evaluates jobs from Glassdoor with a lower threshold and adds them to the Airtable.
 """
 
-import json
-import os
 from pathlib import Path
 
 from tqdm import tqdm

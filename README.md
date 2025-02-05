@@ -14,7 +14,8 @@ You can also add arguments for location, posting age and remote.
 
 ## GlassDoor
 - Visit https://www.glassdoor.com/Job/index.htm and set your search query 
-- Run the glassdoor_scraping_snippet.js in your browser (easiest way in Chrome is to open dev tools -> sources -> snippets and add it there) it takes a couple of minutes to click through all the job descriptions, you can use other windows but not other tabs in the same Chrome window while it runs.
+- Run the `glassdoor_scraping_snippet.js` in your browser
+  - Easiest way in Chrome is to open dev tools -> sources -> snippets and add it there) it takes a couple of minutes to click through all the job descriptions, you can use other windows but not other tabs in the same Chrome window while it runs.
   - For progress indication there are prints to the console. To see only the prints of this script select it in the console left sidebar.
 - Move the downloaded `glassdoor_exported_data.json` file to the work directory of this project
 - Running `main.py` will now parse this json and evaluate the jobs there as well

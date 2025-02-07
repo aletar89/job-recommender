@@ -1,6 +1,8 @@
 """Script to parse jobs scraped from Glassdoor."""
 
 import json
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -13,6 +15,26 @@ def extract_job_id(url: str) -> str:
     params = parse_qs(parsed_url.query)
     job_id = params.get("jobListingId", [""])[0]
     return job_id
+
+
+def parse_posted_time(posted: str) -> str:
+    """Parse the posted time from Glassdoor format (e.g. '5d', '15h') to ISO format."""
+    now = datetime.now()
+
+    match = re.match(r"(\d+)([dh])", posted)
+    if not match:
+        return ""  # Return empty string for unexpected formats
+
+    amount, unit = int(match.group(1)), match.group(2)
+
+    if unit == "d":
+        delta = timedelta(days=amount)
+    elif unit == "h":
+        delta = timedelta(hours=amount)
+    else:
+        return ""  # Unexpected unit
+
+    return (now - delta).date().isoformat()
 
 
 def parse_glassdoor_jobs(file_name: str) -> list[JobDescription]:
@@ -42,7 +64,7 @@ def parse_glassdoor_jobs(file_name: str) -> list[JobDescription]:
             company=job["company"],
             title=job["title"],
             description=job["description"],
-            posted_date="",  # TODO: Add date posted
+            posted_date=parse_posted_time(job["age"]),
         )
         jobs.append(job_desc)
         with open(filepath, "w", encoding="utf-8") as f:

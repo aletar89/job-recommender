@@ -7,10 +7,10 @@
                 let description = document.querySelector(".JobDetails_jobDescription__uW_fK")?.textContent.trim() || "";
                 let company = document.querySelector(".EmployerProfile_employerNameHeading__bXBYr")?.textContent.trim() || "";
                 let title = document.querySelector(".heading_Level1__soLZs")?.textContent.trim() || "";
+                let age = item.parentElement.parentElement.querySelector(".JobCard_listingAge__jJsuc").textContent.trim() || "";
                 let link = item.href;
-                //TODO: Add date posted
                 console.log("Fetched " + company + " job")
-                resolve({ description, company, title, link });
+                resolve({ description, company, title, link, age });
             }, 5000);
         });
     }
@@ -43,11 +43,9 @@
     }
     
     async function main() {
-        //TODO: Click on the "Show more jobs" button
         const data = await parseContent();
         if (data.length === 0) {
             console.log("No data found. Check your selectors.");
-
             return;
         }
         downloadJSON(data, "glassdoor_exported_data.json");

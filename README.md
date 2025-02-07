@@ -6,6 +6,7 @@ I find this very useful as it removes the emotionaly difficult part of deciding 
 # How to use:
 - Replace the CV in cv.txt with your CV and the skills evaluation in skills.txt with your skills.
 - Create a `.env` file with your OpenAI API key and optionally AirTable key and table parameters (use the `.env.example` for the environ names)
+- Run `pip install -r requirements.txt`
 
 ## LinkedIn
 - Open and run `main.py`
@@ -13,7 +14,7 @@ I find this very useful as it removes the emotionaly difficult part of deciding 
 You can also add arguments for location, posting age and remote.
 
 ## GlassDoor
-- Visit https://www.glassdoor.com/Job/index.htm and set your search query.
+- Visit https://www.glassdoor.com/Job/index.htm and set your search query and filters.
 - Run the `glassdoor_scraping_snippet.js` in your browser
   - Easiest way in Chrome is to open dev tools -> sources -> snippets and add it there.
   - It takes a couple of minutes to go through all the job descriptions, you can use other windows but not other tabs in the same Chrome window while it runs.

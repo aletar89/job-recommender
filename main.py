@@ -9,7 +9,7 @@ from glassdoor_json_parser import parse_glassdoor_jobs
 from job_description import JobDescription
 from scrape_linkedin import scrape_linkedin
 
-THRESHOLD = 85
+THRESHOLD = 80
 VERBOSE = False
 
 

@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 from job_description import JobDescription, cache_job_description
 
@@ -78,7 +79,7 @@ def get_search_page(search_url: str) -> list[str]:
     for job_item in all_jobs_on_this_page:
         try:
             jobid = (
-                job_item.find("div", {"class": "base-card"})
+                job_item.find(attrs={"data-entity-urn": True})
                 .get("data-entity-urn")
                 .split(":")[3]
             )
@@ -146,7 +147,9 @@ def get_linkedin_job_description(job_id: str) -> JobDescription:
         raise RuntimeError(f"Failed to fetch job {job_id}")
     soup = BeautifulSoup(resp.text, "html.parser")
     try:
-        company_elem = soup.find("a", class_="topcard__org-name-link")
+        company_elem = soup.find("a", class_="topcard__org-name-link") or soup.find(
+            "span", class_="topcard__flavor"
+        )
         title_h2 = soup.find("h2", class_="top-card-layout__title")
         desc_elem = soup.find("div", class_="show-more-less-html__markup")
         date_elem = soup.find(
@@ -191,4 +194,7 @@ def scrape_linkedin(
 ) -> list[JobDescription]:
     """Scrape LinkedIn"""
     job_ids = crawl_search(search_query, num_results, geo_id, post_time, remote)
-    return [get_linkedin_job_description(job_id) for job_id in job_ids]
+    job_descriptions = []
+    for job_id in tqdm(job_ids, desc="Scraping LinkedIn job descriptions"):
+        job_descriptions.append(get_linkedin_job_description(job_id))
+    return job_descriptions

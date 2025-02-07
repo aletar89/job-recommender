@@ -37,7 +37,9 @@ if __name__ == "__main__":
     # Also possible to use:
     # my_table = CsvTable()
     # TODO: Add more Google Sheet support
+    print("Scraping LinkedIn search...")
     linkedin_jobs = scrape_linkedin("Software Engineer", num_results=100)
     evalupate_jobs(linkedin_jobs, my_table)
+    print("Parsing Glassdoor JSON...")
     glassdoor_jobs = parse_glassdoor_jobs("glassdoor_exported_data.json")
     evalupate_jobs(glassdoor_jobs, my_table)
